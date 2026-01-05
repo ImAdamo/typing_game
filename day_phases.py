@@ -17,6 +17,12 @@ class Phases:  # TODO: tried doing this with colors.get_color(colors.PHASE), but
         Phase("Night", Colors.NIGHT)
     ]
     current_phase = phases[0]
+    day = 1
 
     def next_phase(self):
         self.current_phase = self.phases[(self.phases.index(self.current_phase) + 1) % 4]
+        if self.current_phase == self.phases[0]:
+            self.day += 1
+
+    def is_night(self):
+        return self.current_phase.name == self.phases[-1].name

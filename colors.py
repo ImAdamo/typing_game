@@ -43,6 +43,8 @@ class Colors:
     EVENING = Color(curses.COLOR_MAGENTA, curses.COLOR_BLACK)
     NIGHT = Color(curses.COLOR_BLUE, curses.COLOR_BLACK)
 
+    SHADOW = Color(curses.COLOR_BLACK, 237)
+
     @staticmethod
     def init():
         """
@@ -52,4 +54,7 @@ class Colors:
         # Iterate over class attributes to find ColorDef instances
         for member in vars(Colors).values():
             if isinstance(member, Color):
-                member.init_pair()
+                if member != Colors.SHADOW:
+                    member.init_pair()
+                elif curses.has_extended_color_support():
+                    member.init_pair()

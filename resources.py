@@ -10,8 +10,11 @@ class Resource:
     def __repr__(self):
         return f"{self.name}: {self.amount}{self.symbol}"
 
-    def add(self, amount):
+    def add(self, amount: int):
         self.amount += amount
+
+    def subtract(self, amount: int):
+        self.amount -= min(amount, self.amount)
 
 
 @dataclass

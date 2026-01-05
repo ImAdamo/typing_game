@@ -1,20 +1,35 @@
 from math import sqrt
+from dataclasses import dataclass
+from buildings import BuildingType
 
 CENTER_KEYS = [(2, 3), (2, 6)]  # this should be rewritten, don't really like how this is not dynamic
 
 
 class Key:
-    def __init__(self, char, row, col):
-        self.char = char
-        self.row = row
-        self.col = col
-        self.building = None
-        self.locked = True
-        self.unlock_cost = 0
-
-        # Calculate Unlock Cost
-        dist = min(
+    def __init__(self, char: str, row: int, col: int):
+        self.char: str = char
+        self.row: int = row
+        self.col: int = col
+        self.building: BuildingType | None = None
+        self.locked: bool = True
+        self.activated: bool = False
+        self.unlock_cost: int = int(10 + (min(
             sqrt((r - row) ** 2 + (c - col) ** 2)
             for r, c in CENTER_KEYS
-        )
-        self.unlock_cost = int(10 + (dist * 15))
+        ) * 15))
+
+
+class Keyboard:
+    def __init__(self, layout, buildings):
+        self.keys = list()
+        for row_id, char_row in enumerate(layout):
+            for col_id, char in enumerate(list(char_row)):
+                key = Key(char, row_id, col_id)
+                if (row_id, col_id) in CENTER_KEYS:
+                    key.locked = False
+                    key.building = buildings.low_food if (row_id, col_id) == CENTER_KEYS[0] else buildings.low_money
+                self.keys.append(key)
+        self.char_rows = layout
+
+    def get(self, char):
+        return next((item for item in self.keys if item.char == char), None)
