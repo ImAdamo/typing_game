@@ -10,10 +10,12 @@ class BuildingType:
     output_resource: Resource
     output_amount: int
     input_resource: Resource | None = None
-    input_cost: int | None = None
+    input_amount: int | None = None
 
     def __repr__(self):
-        return f"{self.symbol}{self.name}"
+        output_str = f"+{self.output_amount}{self.output_resource.symbol}"
+        input_str = f"-{self.input_amount}{self.input_resource.symbol}" if self.input_resource else "-"
+        return f"{self.name:<10} {self.symbol:<4} ${self.purchase_cost:<5} {output_str:<15} {input_str:<10}"
 
     def get_text(self) -> str:
         return "This is a placeholder."
@@ -37,3 +39,9 @@ class Buildings:
                     self.low_military, self.high_military,
                     self.low_knowledge, self.high_knowledge
                     ]
+
+    def find_building_by_name(self, name):
+        """
+        Returns the first building found with the given name (could pose trouble with duplicate buildings)
+        """
+        return [building for building in self if building.name.lower() == name.lower()][0]

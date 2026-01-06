@@ -1,6 +1,6 @@
 from math import sqrt
 from dataclasses import dataclass
-from buildings import BuildingType
+from buildings import BuildingType, Buildings
 
 CENTER_KEYS = [(2, 3), (2, 6)]  # this should be rewritten, don't really like how this is not dynamic
 
@@ -20,7 +20,7 @@ class Key:
 
 
 class Keyboard:
-    def __init__(self, layout, buildings):
+    def __init__(self, layout: list[str], buildings: Buildings):
         self.keys = list()
         for row_id, char_row in enumerate(layout):
             for col_id, char in enumerate(list(char_row)):
@@ -31,5 +31,5 @@ class Keyboard:
                 self.keys.append(key)
         self.char_rows = layout
 
-    def get(self, char):
-        return next((item for item in self.keys if item.char == char), None)
+    def get_by_char(self, char: str) -> Key:
+        return next((item for item in self.keys if item.char.lower() == char.lower()), None)
