@@ -12,7 +12,7 @@ class Key:
         self.col: int = col
         self.building: BuildingType | None = None
         self.locked: bool = True
-        self.activated: bool = False
+        self.active: bool = True
         self.unlock_cost: int = int(10 + (min(
             sqrt((r - row) ** 2 + (c - col) ** 2)
             for r, c in CENTER_KEYS
@@ -33,3 +33,7 @@ class Keyboard:
 
     def get_by_char(self, char: str) -> Key:
         return next((item for item in self.keys if item.char.lower() == char.lower()), None)
+
+    def reset_keys(self):
+        for key in self.keys:
+            key.active = True

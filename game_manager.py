@@ -10,6 +10,7 @@ MODE_IDLE = 'IDLE'
 MODE_TYPING = 'TYPING_JOB'
 MODE_BUILDING_SELECT = 'TYPING_BUILD'
 
+
 class GameManager:
     def __init__(self, keyboard_layout: list[str]):
         # Resources
@@ -19,7 +20,9 @@ class GameManager:
         self.keyboard = Keyboard(keyboard_layout, self.buildings)
 
         # Logging tools
-        self.log_message: str = "..."
+        self.debug_mode: bool = True
+        self.log_message: str = ""
+        self.priority_message: str = ""
 
         # In-game messages
         self.message: str = ""
@@ -79,23 +82,28 @@ class GameManager:
 
     def interact_key(self, char):
         if self.mode == MODE_IDLE:
-            self.current_key = self.keyboard.get_by_char(char)
-            if self.current_key.locked:
-                if self.resources.money.amount >= self.current_key.unlock_cost:
-                    self.current_key.locked = False
-                    self.resources.money.subtract(self.current_key.unlock_cost)
-                    self.message = f"Key '{self.current_key.char.upper()}' unlocked!"
-                    self.message_time = time()
-                    self.message_color = Colors.SUCCESS.pair
-                else:
-                    self.message = f"You need {self.current_key.unlock_cost} to unlock '{self.current_key.char.upper()}'!"
-                    self.message_time = time()
-                    self.message_color = Colors.ERROR.pair
-            elif self.current_key.building is not None:
-                self.current_text = self.current_key.building.name
-                self.mode = MODE_TYPING
-            elif self.current_key.building is None:  # already checks for key locked in earlier if
-                self.mode = MODE_BUILDING_SELECT
+            if not self.phases.is_night():
+                self.current_key = self.keyboard.get_by_char(char)
+                if self.current_key.locked:
+                    if self.resources.money.amount >= self.current_key.unlock_cost:
+                        self.current_key.locked = False
+                        self.resources.money.subtract(self.current_key.unlock_cost)
+                        self.message = f"Key '{self.current_key.char.upper()}' unlocked!"
+                        self.message_time = time()
+                        self.message_color = Colors.SUCCESS.pair
+                    else:
+                        self.message = f"You need {self.current_key.unlock_cost} to unlock '{self.current_key.char.upper()}'!"
+                        self.message_time = time()
+                        self.message_color = Colors.ERROR.pair
+                elif self.current_key.building is not None and self.current_key.active == True:
+                    self.current_text = self.current_key.building.get_text()
+                    self.mode = MODE_TYPING
+                elif self.current_key.building is None:  # already checks for key locked in earlier if
+                    self.mode = MODE_BUILDING_SELECT
+            else:
+                self.message = f"The city sleeps at night..."
+                self.message_time = time()
+                self.message_color = Colors.NIGHT.pair
 
     def logic_checks(self):
         """
@@ -108,28 +116,39 @@ class GameManager:
                     build = self.buildings.find_building_by_name(inp)
                     self.current_key.building = build
                     self.resources.money.subtract(build.purchase_cost)
-                    self.reset()
-        elif self.mode == MODE_TYPING and self.current_key.building:
-            if "".join(self.current_input).lower() == self.current_text:
+                    self.message = f"{build.name.capitalize()} built on key '{self.current_key.char.upper()}'!"
+                    self.message_time = time()
+                    self.message_color = Colors.SUCCESS.pair
+                    self.reset(False)
+        elif self.mode == MODE_TYPING and self.current_key.building is not None:
+            if "".join(self.current_input) == self.current_text:
                 for res in self.resources:
                     if res == self.current_key.building.output_resource:
                         res.add(self.current_key.building.output_amount)
-                        self.reset()
-
+                        self.current_key.active = False
+                        self.message = f"You gained {self.current_key.building.output_amount}{self.current_key.building.output_resource.symbol}!"
+                        self.message_time = time()
+                        self.message_color = Colors.SUCCESS.pair
+                        self.reset(False)
+                        break
 
     def key_logic(self, key: int):
         if key != -1:  # might not work
             self.key_press_time = time()
             self.log(key)
-            if key == 9 or key == 10:  # Tab or Enter
-                self.phases.next_phase()
-                self.battle_report = self.resolve_night_battle()
             if 32 <= key <= 126:  # Writable characters
-                key_char = chr(key).lower()
-                self.active_key = key_char
-                if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING):
+                key_char = chr(key)
+                self.active_key = key_char.lower()
+                if self.mode == MODE_BUILDING_SELECT:
                     self.current_input.append(key_char)
+                elif self.mode == MODE_TYPING and len(self.current_input) < len(self.current_text):
+                    self.current_input.append(key_char)
+                    self.log(key)
                 self.interact_key(key_char)
+            if (key == 9 or key == 10) and self.mode == MODE_IDLE:  # Tab or Enter
+                self.phases.next_phase()
+                self.keyboard.reset_keys()
+                self.battle_report = self.resolve_night_battle()
 
             # TODO: add support for diacritics
 
@@ -137,19 +156,20 @@ class GameManager:
                 if self.mode == MODE_IDLE:
                     raise KeyboardInterrupt
                 else:
-                    self.reset()
+                    self.reset(True)
             if key == 263 or key == 8:  # TODO: test what key == 263 actually does (it looked like backspace on my home PC)
                 if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING) and self.current_input:
                     self.current_input.pop()
 
         self.logic_checks()
 
-    def reset(self):
+    def reset(self, reset_message):
         """
         Reset most relevant parameters of GameManager
         """
-        self.message = ""
-        self.message_time = None
+        if reset_message:
+            self.message = ""
+            self.message_time = None
 
         self.mode = MODE_IDLE
 
@@ -158,5 +178,7 @@ class GameManager:
 
         self.current_key = None
 
-    def log(self, message):
-        self.log_message = str(message)
+    def log(self, message, priority: bool = False):
+        if self.debug_mode:
+            self.priority_message = str(message) if priority else ""
+            self.log_message = self.priority_message if self.priority_message else str(message)

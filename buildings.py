@@ -18,6 +18,7 @@ class BuildingType:
         return f"{self.name:<10} {self.symbol:<4} ${self.purchase_cost:<5} {output_str:<15} {input_str:<10}"
 
     def get_text(self) -> str:
+        # return "a"
         return "This is a placeholder."
 
 

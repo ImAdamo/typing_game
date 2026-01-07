@@ -51,11 +51,11 @@ def draw_border(game_manager, screen, max_h, max_w, curr_phase):
         screen.addstr(max_h - 1, 1, "═" * (max_w - 2), border_color)
         screen.addstr(max_h - 1, max_w - 1, "╝", border_color)  # TODO: this always crashes, figure it out
 
-        # Add phase indicator in corners for extra visibility
+        # Phase indicator
         screen.addstr(0, 2, f" {curr_phase.name} ", border_color | curses.A_REVERSE)
 
     except curses.error:
-        # game_manager.log("Draw Border failed")  # commented for now for clarity
+        # game_manager.log("DrawBorder failed")
         pass
 
 
@@ -108,11 +108,15 @@ def draw_keyboard(screen, game_manager, max_h, max_w):
             elif slot:
                 if slot.locked:
                     bg_color = Colors.ERROR.pair  # Red Locked
-                elif slot.activated:
+                elif not slot.active and game_manager.mode == gm.MODE_IDLE:
                     bg_color = Colors.WARNING.pair  # Yellow Activated (Wait next phase)
+                    draw_y += 1  # Offset down
+                    draw_x += 1  # Offset right
+                    draw_shadow = False  # No shadow when pressed
 
             # Draw the key box (with press offset and shadow logic)
-            draw_rounded_key_box(game_manager, screen, draw_y, draw_x, key_height, key_width, bg_color, shadow=draw_shadow)
+            draw_rounded_key_box(game_manager, screen, draw_y, draw_x, key_height, key_width, bg_color,
+                                 shadow=draw_shadow)
 
             # Fill the interior
             for row in range(1, key_height - 1):
@@ -202,7 +206,7 @@ def draw_ui(screen, game_manager, max_h, max_w):
         screen.addstr(1, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
     except curses.error:
         game_manager.log("DrawUI failed at phase/resources/hint")
-    if game_manager.message and time() - game_manager.message_time  <= MESSAGE_TIME:
+    if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
         try:
             c_x = (max_w - len(game_manager.message)) // 2
             screen.addstr(3, c_x, game_manager.message, game_manager.message_color | curses.A_BOLD)
@@ -230,7 +234,8 @@ def draw_ui(screen, game_manager, max_h, max_w):
     # TODO: make this work (target_key_char, key building, target_text,...)
     elif game_manager.mode == gm.MODE_TYPING:  # TODO: clean this up when I get to mode
         msg = f"ACTIVATING: {game_manager.current_key.building.name.upper()}"  # TODO: is this correct?
-        draw_typing_interface(game_manager, screen, msg, game_manager.target_text, game_manager.current_input, center_y, max_w)
+        draw_typing_interface(game_manager, screen, msg, game_manager.current_text, game_manager.current_input,
+                              center_y, max_w)
 
     elif game_manager.mode == gm.MODE_BUILDING_SELECT:  # TODO: clean this up when I get to mode
         # Build Menu Table
@@ -302,7 +307,7 @@ def draw_typing_interface(game_manager, screen, title, target, current_input, st
                     color = Colors.ERROR.pair  # Incorrect
             screen.addch(start_y, start_x + i, char, color | curses.A_BOLD)
 
-        cursor_idx = len(current_input)  # TODO: why cursor_idx? why the x? why id?
+        cursor_idx = len(current_input)
         if cursor_idx < len(target):
             screen.addch(start_y + 1, start_x + cursor_idx, '^', Colors.TEXT.pair)
     except:
@@ -340,5 +345,3 @@ if __name__ == "__main__":
         curses.wrapper(main)
     except KeyboardInterrupt:
         pass
-
-## HOW DOES THIS SHIT WORK (building, doesn't write itself into actual key object)
