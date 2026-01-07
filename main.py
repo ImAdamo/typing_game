@@ -49,7 +49,7 @@ def draw_border(game_manager, screen, max_h, max_w, curr_phase):
         # Bottom border (double line)
         screen.addstr(max_h - 1, 0, "╚", border_color)
         screen.addstr(max_h - 1, 1, "═" * (max_w - 2), border_color)
-        screen.addstr(max_h - 1, max_w - 1, "╝", border_color)  # TODO: this always crashes, figure it out
+        screen.addstr(max_h - 1, max_w - 1, "╝", border_color)  # TODO: this always crashes, could be win10 cmd terminal's fault
 
         # Phase indicator
         screen.addstr(0, 2, f" {curr_phase.name} ", border_color | curses.A_REVERSE)
@@ -202,8 +202,10 @@ def draw_ui(screen, game_manager, max_h, max_w):
         screen.addstr(1, max_w // 2 - len(res_str) // 2, res_str, Colors.TEXT.pair)
 
         # Help hint (right side)
-        hint = "[TAB/ENTER: Next Phase]"
-        screen.addstr(1, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
+        hints = ["[TAB/ENTER: Next Phase]",
+                 "[ESC: Exit]"]
+        for i, hint in enumerate(hints):
+            screen.addstr(1+i, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
     except curses.error:
         game_manager.log("DrawUI failed at phase/resources/hint")
     if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
@@ -222,7 +224,7 @@ def draw_ui(screen, game_manager, max_h, max_w):
         try:
             screen.addstr(center_y - 2, (max_w - len(title)) // 2, title,
                           Colors.ERROR.pair | curses.A_BOLD)
-            if game_manager.battle_report:  # TODO: finish up battle report and then check this for mistakes
+            if game_manager.battle_report:
                 for i, line in enumerate(game_manager.battle_report):
                     screen.addstr(center_y + i, (max_w - len(line)) // 2, line, Colors.TEXT.pair)
             else:
@@ -231,13 +233,12 @@ def draw_ui(screen, game_manager, max_h, max_w):
         except:
             game_manager.log("DrawUI failed at night")
 
-    # TODO: make this work (target_key_char, key building, target_text,...)
-    elif game_manager.mode == gm.MODE_TYPING:  # TODO: clean this up when I get to mode
-        msg = f"ACTIVATING: {game_manager.current_key.building.name.upper()}"  # TODO: is this correct?
+    elif game_manager.mode == gm.MODE_TYPING:
+        msg = f"ACTIVATING: {game_manager.current_key.building.name.upper()}"
         draw_typing_interface(game_manager, screen, msg, game_manager.current_text, game_manager.current_input,
                               center_y, max_w)
 
-    elif game_manager.mode == gm.MODE_BUILDING_SELECT:  # TODO: clean this up when I get to mode
+    elif game_manager.mode == gm.MODE_BUILDING_SELECT:
         # Build Menu Table
         title = "SELECT BUILDING TO CONSTRUCT"
         try:
@@ -250,9 +251,8 @@ def draw_ui(screen, game_manager, max_h, max_w):
             screen.addstr(center_y - 1, (max_w - len(input_lbl)) // 2, input_lbl, Colors.WARNING.pair)
 
             # Table Header
-            header = f"{'NAME':<10} {'ICON':<4} {'COST':<6} {'OUTPUT':<15} {'INPUT':<10}"  # TODO: clean up this whole drawing with a repr in the Resources dataclass
-            table_w = len(header)
-            start_x = (max_w - table_w) // 2
+            header = f"{'NAME':<10} {'ICON':<4} {'COST':<6} {'OUTPUT':<15} {'INPUT':<10}"
+            start_x = (max_w - len(header)) // 2
             screen.addstr(center_y + 1, start_x, header, Colors.TEXT.pair | curses.A_UNDERLINE)
 
             # Rows
@@ -270,14 +270,15 @@ def draw_ui(screen, game_manager, max_h, max_w):
             game_manager.log("DrawUI Failed on BUILDING_SELECT")
 
     elif game_manager.mode == gm.MODE_IDLE:
-        # Idle # TODO: rewrite this beginning sentence to be more senseful
+        # Idle
         lines = [
             "CITY MANAGEMENT",
-            "Morning/Noon/Evening: Build & Produce",
-            "Night: Defend against threats",
+            "Morning/Afternoon/Evening: Build & Produce",
+            "Night: Defend your city with your Military",
             "",
             "Press [Key] to Select",
-            "TAB or ENTER to Next Phase"
+            "[Tab] or [Enter] to Next Phase"
+            "[Esc] to Exit"
         ]
         for i, line in enumerate(lines):
             try:
