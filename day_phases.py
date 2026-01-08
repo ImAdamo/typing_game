@@ -9,7 +9,7 @@ class Phase:  # Here mostly just for future additions (could go with a simpler s
 
 
 @dataclass
-class Phases:  # TODO: tried doing this with colors.get_color(colors.PHASE), but the colors had to be initialized first
+class Phases:
     phases = [
         Phase("Morning", Colors.MORNING),
         Phase("Afternoon", Colors.NOON),
