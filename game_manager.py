@@ -12,7 +12,11 @@ MODE_BUILDING_SELECT = 'TYPING_BUILD'
 MODE_GAME_OVER = 'GAME_OVER'
 BUILDINGS_FILE_PATH = 'assets/buildings.json'
 CENTER_KEYS = ["f", "j", "g", "h"]
-THREAT_MODIFIER = 5
+
+# Balancing tools
+THREAT_STARTER = 4
+THREAT_MODIFIER = 1.2
+DAYS_TO_SURVIVE = 5
 
 
 class GameManager:
@@ -25,7 +29,7 @@ class GameManager:
         self.keyboard.starting_keys(self.buildings)
 
         # Logging tools
-        self.debug_mode: bool = True
+        self.debug_mode: bool = False
         self.log_message: str = ""
         self.priority_message: str = ""
 
@@ -49,10 +53,10 @@ class GameManager:
         self.mistakes: int = 0
 
         # Balance tools
-        self.threat = self.calculate_threat()  # TODO: balance ts out
+        self.threat = self.calculate_threat()
 
     def calculate_threat(self) -> int:
-        return self.phases.day * THREAT_MODIFIER + randint(0, self.resources.money.amount // 50)
+        return int(round((self.phases.day * THREAT_STARTER) * (THREAT_MODIFIER ** self.phases.day)))
 
     def resolve_night_battle(self) -> list[str] | None:
         """
@@ -65,16 +69,15 @@ class GameManager:
             result_str = f"THREAT LEVEL: {self.threat} | DEFENSE: {defense}"
 
             if defense >= self.threat:
-                reward = self.threat * 2
-                self.resources.knowledge.add(reward)  # TODO: balance ts out
+                self.resources.knowledge.add(self.threat)
                 return [
                     "VICTORY!",
                     result_str,
                     "The city is safe.",
-                    f"Gained {reward} Knowledge from combat experience."
+                    f"Gained {self.threat}{self.resources.knowledge.symbol} from combat experience."
                 ]
             else:
-                self.game_over(False)
+                self.game_over(win=False)
 
                 return [
                     "DEFEAT...",
@@ -89,26 +92,30 @@ class GameManager:
         if self.mode == MODE_IDLE:
             if not self.phases.is_night():
                 self.current_key = self.keyboard.get_by_char(char)
+                curr_building = self.current_key.building
                 if self.current_key.locked:
                     if self.resources.knowledge.amount >= self.current_key.unlock_cost:
                         self.current_key.locked = False
                         self.resources.knowledge.subtract(self.current_key.unlock_cost)
                         self.add_message(f"Key '{self.current_key.char.upper()}' unlocked!", Colors.SUCCESS.pair)
-                        self.message_time = time()
                     else:
                         self.add_message(
                             f"You need {self.current_key.unlock_cost}{self.resources.knowledge.symbol} to unlock '{self.current_key.char.upper()}'!",
                             Colors.ERROR.pair)
-                        self.message_time = time()
-                elif self.current_key.building is not None and self.current_key.active:
-                    self.current_text = self.current_key.building.get_text()
+                elif curr_building is not None and self.current_key.active:
+                    if curr_building.input_resource is not None:
+                        if curr_building.input_resource.amount < curr_building.input_amount:
+                            self.add_message(
+                                f"You need {curr_building.input_amount}{curr_building.input_resource.symbol} to activate {curr_building.input_resource.name}!",
+                                Colors.ERROR.pair)
+                            return
+                    self.current_text = curr_building.get_text()
                     self.mode = MODE_TYPING
                     self.type_time = time()
-                elif self.current_key.building is None:  # already checks for key locked in earlier if
+                elif curr_building is None:  # already checks for key locked in earlier if
                     self.mode = MODE_BUILDING_SELECT
             else:
                 self.add_message(f"The city sleeps at night...", Colors.NIGHT.pair)
-                self.message_time = time()
 
     def logic_checks(self):
         """
@@ -123,24 +130,24 @@ class GameManager:
                     self.resources.money.subtract(build.purchase_cost)
                     self.add_message(f"{build.name.capitalize()} built on key '{self.current_key.char.upper()}'!",
                                      Colors.SUCCESS.pair)
-                    self.message_time = time()
                     self.reset(False)
         elif self.mode == MODE_TYPING and self.current_key.building is not None:
             if "".join(self.current_input) == self.current_text:
                 for res in self.resources:
                     if res == self.current_key.building.output_resource:
-                        output = self.current_key.building.output_amount
-                        amount_gained = int(output * (1.0 - min(self.mistakes / len(self.current_text), 1.0)))
+                        mistake_ratio: float = (1.0 - min(self.mistakes / len(self.current_text), 1.0))
+                        amount_gained: int = int(round(self.current_key.building.output_amount * mistake_ratio))
                         res.add(amount_gained)
                         self.current_key.active = False
                         self.add_message(
                             f"You gained {amount_gained}{self.current_key.building.output_resource.symbol}!",
                             Colors.SUCCESS.pair)
-
-                        cpm = (len(self.current_text) * 12) / (time() - self.type_time)
-
-                        self.add_message(f"Your WPM was: {cpm:.02f}!", Colors.SUCCESS.pair)
-                        self.message_time = time()
+                        wpm = (len(self.current_text) * 12) / (time() - self.type_time)
+                        self.add_message(f"Your WPM was: {wpm:.02f}!", Colors.SUCCESS.pair)
+                        self.add_message(f"Your accuracy was: {mistake_ratio:.2%}.",
+                                         Colors.SUCCESS.pair if mistake_ratio >= 0.5 else Colors.ERROR.pair)
+                        if self.current_key.building.input_resource is not None:
+                            self.current_key.building.input_resource.subtract(self.current_key.building.input_amount)
                         self.reset(False)
                         break
 
@@ -153,7 +160,6 @@ class GameManager:
             self.add_message("You have lost!", Colors.ERROR.pair)
         self.add_message(f"Your total money was {self.resources.money.amount}!", Colors.SUCCESS.pair)
         self.add_message("Press [Esc] to exit the game.", Colors.TEXT.pair)
-        self.message_time = time()
 
     def key_logic(self, key: int):
         if key != -1:  # might not work
@@ -177,12 +183,12 @@ class GameManager:
                     self.threat = self.calculate_threat()
                     if self.phases.is_night():
                         self.battle_report = self.resolve_night_battle()
-                    if self.phases.day == 6:
-                        self.game_over(True)
+                        if self.phases.day == DAYS_TO_SURVIVE:
+                            self.game_over(win=True)
 
                 # TODO: add support for diacritics
 
-                if key == 263 or key == 8:  # TODO: test what key == 263 actually does (it looked like backspace on my home PC)
+                if key == 263 or key == 8:
                     if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING) and self.current_input:
                         self.current_input.pop()
 
@@ -213,6 +219,7 @@ class GameManager:
         if len(self.message) >= 3:
             self.message.pop(0)
         self.message.append((message, message_color))
+        self.message_time = time()
 
     def log(self, message, priority: bool = False):
         if self.debug_mode:

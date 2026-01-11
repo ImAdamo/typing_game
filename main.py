@@ -281,7 +281,7 @@ def draw_ui(screen, game_manager, max_h, max_w):
             "Morning/Afternoon/Evening: Build & Produce",
             "Night: Defend your city with your Military",
             "",
-            "Survive the nightly attacks for 5 days!",
+            f"Survive the nightly attacks for {gm.DAYS_TO_SURVIVE} days!",
             "",
             "Press [Key] to Select",
             "[Tab] or [Enter] to Next Phase",
@@ -289,7 +289,8 @@ def draw_ui(screen, game_manager, max_h, max_w):
         ]
         for i, line in enumerate(lines):
             try:
-                screen.addstr(center_y + i, (max_w - len(line)) // 2, line, Colors.TEXT.pair)
+                screen.addstr(6 + i, (max_w - len(line)) // 2, line, Colors.TEXT.pair)
+                # 6 is here because it's the first empty line on the screen (3-5 are messages)
             except:
                 game_manager.log("DrawUI failed on IDLE")
 

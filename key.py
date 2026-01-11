@@ -16,7 +16,7 @@ class Key:
         self.unlock_cost: int = int((min(
             sqrt((r - row) ** 2 + (c - col) ** 2)
             for r, c in CENTER_KEYS.values()
-        ) * 5))
+        ) * 10))
 
 
 class Keyboard:
