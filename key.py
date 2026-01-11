@@ -13,10 +13,10 @@ class Key:
         self.building: BuildingType | None = None
         self.locked: bool = True
         self.active: bool = True
-        self.unlock_cost: int = int(10 + (min(
+        self.unlock_cost: int = int((min(
             sqrt((r - row) ** 2 + (c - col) ** 2)
             for r, c in CENTER_KEYS.values()
-        ) * 15))
+        ) * 5))
 
 
 class Keyboard:

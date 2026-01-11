@@ -134,7 +134,7 @@ def draw_keyboard(screen, game_manager, max_h, max_w):
             if slot:
                 if slot.locked:
                     try:
-                        cost_str = f"${slot.unlock_cost}"
+                        cost_str = f"{slot.unlock_cost}{game_manager.resources.knowledge.symbol}"
                         screen.addstr(draw_y + 2, draw_x + (key_width - len(cost_str)) // 2, cost_str, bg_color)
                     except:
                         game_manager.log("DrawKeyboard failed at unlock cost")
@@ -212,9 +212,9 @@ def draw_ui(screen, game_manager, max_h, max_w):
         MESSAGE_TIME = 1000.0
     if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
         try:
-            for dy, message in enumerate(game_manager.message):
+            for dy, (message, message_color) in enumerate(game_manager.message):
                 c_x = (max_w - len(message)) // 2
-                screen.addstr(3+dy, c_x, message, game_manager.message_color | curses.A_BOLD)
+                screen.addstr(3+dy, c_x, message, message_color | curses.A_BOLD)
         except:
             game_manager.log("DrawUI failed at message")
     else:
@@ -309,11 +309,9 @@ def draw_typing_interface(game_manager, screen, title, target, current_input, st
                 if current_input[i] == char:
                     color = Colors.SUCCESS.pair  # Correct
                 elif char == ' ' and current_input[i] != ' ':
-                    game_manager.mistakes += 1
                     color = Colors.ERROR.pair  # Incorrect space input
                     screen.addch(start_y + 1, start_x + i, '¯', color)  # Red overline ASCII char for wrong space
                 else:
-                    game_manager.mistakes += 1
                     color = Colors.ERROR.pair  # Incorrect
             screen.addch(start_y, start_x + i, char, color | curses.A_BOLD)
 
