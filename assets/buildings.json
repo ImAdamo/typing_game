@@ -1,0 +1,159 @@
+{
+  "buildings": [
+    {
+      "id": "low_food",
+      "name": "Hut",
+      "symbol": "🛖",
+      "purchase_cost": 10,
+      "output_resource": "food",
+      "output_amount": 5,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "A simple hut shelters a small family and their cooking fire.",
+        "Smoke curls gently from the hut's roof at mealtime.",
+        "The hut smells of earth, wood, and fresh stew.",
+        "A worn door creaks as someone steps out of the hut with a basket.",
+        "Life is modest, but warm, inside the hut."
+      ]
+    },
+    {
+      "id": "high_food",
+      "name": "Farm",
+      "symbol": "🚜",
+      "purchase_cost": 50,
+      "output_resource": "food",
+      "output_amount": 15,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "Fields stretch wide around the farm, heavy with crops.",
+        "A farmer wipes sweat from his brow as the farm buzzes with activity.",
+        "The farm smells of soil, grain, and hard-earned harvests.",
+        "Carts creak as food is hauled away from the farm.",
+        "The rhythm of the farm follows the sun and seasons."
+      ]
+    },
+    {
+      "id": "low_military",
+      "name": "Tent",
+      "symbol": "⛺",
+      "purchase_cost": 5,
+      "output_resource": "military",
+      "output_amount": 2,
+      "input_resource": "food",
+      "input_amount": 1,
+      "texts": [
+        "A small tent flaps in the wind, sheltering tired soldiers.",
+        "Weapons lean against the tent poles, ready at a moment's notice.",
+        "The tent smells of leather, oil, and campfire smoke.",
+        "Quiet orders are whispered inside the tent at dusk.",
+        "The tent stands temporary, but discipline within is firm."
+      ]
+    },
+    {
+      "id": "high_military",
+      "name": "Barracks",
+      "symbol": "⚔",
+      "purchase_cost": 100,
+      "output_resource": "military",
+      "output_amount": 10,
+      "input_resource": "food",
+      "input_amount": 5,
+      "texts": [
+        "The barracks echo with marching boots and shouted commands.",
+        "Soldiers train relentlessly in the yard beside the barracks.",
+        "Weapons are polished neatly inside the barracks halls.",
+        "The barracks never truly sleep, guards shifts through the night.",
+        "Strength and order define life inside the barracks."
+      ]
+    },
+    {
+      "id": "low_knowledge",
+      "name": "School",
+      "symbol": "🏫",
+      "purchase_cost": 75,
+      "output_resource": "knowledge",
+      "output_amount": 10,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "Chalk scrapes the board as lessons begin in the school.",
+        "Children laugh and argue quietly in the schoolyard.",
+        "The school smells of ink, paper, and curiosity.",
+        "A teacher clears her throat to regain attention in the school.",
+        "Knowledge grows steadily within the school walls."
+      ]
+    },
+    {
+      "id": "high_knowledge",
+      "name": "Library",
+      "symbol": "📚",
+      "purchase_cost": 150,
+      "output_resource": "knowledge",
+      "output_amount": 25,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "Rows of books stretch endlessly inside the library.",
+        "The library is silent except for the turning of pages.",
+        "Dust motes float in sunbeams across the library floor.",
+        "Scholars whisper discoveries deep within the library stacks.",
+        "The library preserves knowledge long after voices fade."
+      ]
+    },
+    {
+      "id": "low_money",
+      "name": "Market",
+      "symbol": "🏪",
+      "purchase_cost": 100,
+      "output_resource": "money",
+      "output_amount": 20,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "Fresh bread, still warm! a vendor cries, and coins clink as customers crowd the stall.",
+        "The market roars with haggling voices, and someone shouts, That's my last price!",
+        "Two for one! echoes down the street, but the crowd's chatter nearly drowns it out.",
+        "A butcher laughs behind his counter, and a buyer snaps back, You call that a deal?",
+        "The market hums with footsteps and laughter, and a child's voice asks, Can we buy it?",
+        "Colorful stalls line the square, and merchants wave eagerly at passersby.",
+        "Coins exchange hands faster than words in the bustling market."
+      ]
+    },
+    {
+      "id": "medium_money",
+      "name": "Factory",
+      "symbol": "🏭",
+      "purchase_cost": 300,
+      "output_resource": "money",
+      "output_amount": 100,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "The factory whistles loudly as workers begin their shifts.",
+        "Smoke rises from tall chimneys, marking the factory's relentless pace.",
+        "Machines clatter day and night inside the factory walls.",
+        "The factory floor shakes with motion, productivity never slowing.",
+        "Stacks of finished goods leave the factory in endless carts."
+      ]
+    },
+    {
+      "id": "high_money",
+      "name": "Bank",
+      "symbol": "🏦",
+      "purchase_cost": 500,
+      "output_resource": "money",
+      "output_amount": 200,
+      "input_resource": null,
+      "input_amount": null,
+      "texts": [
+        "The bank doors swing open, and a clerk adjusts his glasses behind the counter.",
+        "Gold rests safely in locked vaults beneath the quiet bank hall.",
+        "A banker whispers about interest rates while ink dries on contracts.",
+        "The bank smells of paper, polish, and long-term planning.",
+        "Coins flow steadily through the bank, even when the streets are silent."
+      ]
+    }
+  ]
+}

@@ -23,6 +23,7 @@ class Resources:
     food = Resource("Food", "🍖", 0)
     military = Resource("Military", "🪖", 0)
     knowledge = Resource("Knowledge", "🧠", 0)
+    __instance = None
 
     def __iter__(self):
         yield from [self.money,
@@ -33,3 +34,15 @@ class Resources:
 
     def __repr__(self):
         return " | ".join((str(i) for i in self))
+
+    def find_resource_by_name(self, name):
+        """
+        Returns the first building found with the given name (could pose trouble with duplicate buildings)
+        """
+        return [resource for resource in self if resource.name.lower() == name.lower()][0]
+
+    @staticmethod
+    def get_instance():
+        if Resources.__instance is None:
+            Resources.__instance = Resources()
+        return Resources.__instance

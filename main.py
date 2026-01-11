@@ -49,14 +49,16 @@ def draw_border(game_manager, screen, max_h, max_w, curr_phase):
         # Bottom border (double line)
         screen.addstr(max_h - 1, 0, "╚", border_color)
         screen.addstr(max_h - 1, 1, "═" * (max_w - 2), border_color)
-        screen.addstr(max_h - 1, max_w - 1, "╝", border_color)  # TODO: this always crashes, could be win10 cmd terminal's fault
+        try:
+            screen.addstr(max_h - 1, max_w - 1, "╝", border_color)
+        except curses.error:
+            pass  # this always crashes, expected error (curses bug, won't fix)
 
         # Phase indicator
         screen.addstr(0, 2, f" {curr_phase.name} ", border_color | curses.A_REVERSE)
 
     except curses.error:
-        # game_manager.log("DrawBorder failed")
-        pass
+        game_manager.log("DrawBorder failed")
 
 
 def draw_keyboard(screen, game_manager, max_h, max_w):
@@ -110,10 +112,6 @@ def draw_keyboard(screen, game_manager, max_h, max_w):
                     bg_color = Colors.ERROR.pair  # Red Locked
                 elif not slot.active and game_manager.mode == gm.MODE_IDLE:
                     bg_color = Colors.WARNING.pair  # Yellow Activated (Wait next phase)
-                    draw_y += 1  # Offset down
-                    draw_x += 1  # Offset right
-                    draw_shadow = False  # No shadow when pressed
-
             # Draw the key box (with press offset and shadow logic)
             draw_rounded_key_box(game_manager, screen, draw_y, draw_x, key_height, key_width, bg_color,
                                  shadow=draw_shadow)
@@ -191,6 +189,7 @@ def draw_rounded_key_box(game_manager, stdscr, y, x, h, w, color, shadow=True):
 
 
 def draw_ui(screen, game_manager, max_h, max_w):
+    global MESSAGE_TIME
     phase_str = f" PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day} "
     res_str = str(game_manager.resources)
 
@@ -205,15 +204,20 @@ def draw_ui(screen, game_manager, max_h, max_w):
         hints = ["[TAB/ENTER: Next Phase]",
                  "[ESC: Exit]"]
         for i, hint in enumerate(hints):
-            screen.addstr(1+i, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
+            screen.addstr(1 + i, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
     except curses.error:
         game_manager.log("DrawUI failed at phase/resources/hint")
+    if game_manager.mode == gm.MODE_GAME_OVER:
+        MESSAGE_TIME = 1000.0
     if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
         try:
-            c_x = (max_w - len(game_manager.message)) // 2
-            screen.addstr(3, c_x, game_manager.message, game_manager.message_color | curses.A_BOLD)
+            for dy, message in enumerate(game_manager.message):
+                c_x = (max_w - len(message)) // 2
+                screen.addstr(3+dy, c_x, message, game_manager.message_color | curses.A_BOLD)
         except:
             game_manager.log("DrawUI failed at message")
+    else:
+        game_manager.reset(True, False)
 
     center_y = max_h // 4
 
@@ -276,8 +280,10 @@ def draw_ui(screen, game_manager, max_h, max_w):
             "Morning/Afternoon/Evening: Build & Produce",
             "Night: Defend your city with your Military",
             "",
+            "Survive the nightly attacks for 5 days!",
+            "",
             "Press [Key] to Select",
-            "[Tab] or [Enter] to Next Phase"
+            "[Tab] or [Enter] to Next Phase",
             "[Esc] to Exit"
         ]
         for i, line in enumerate(lines):
