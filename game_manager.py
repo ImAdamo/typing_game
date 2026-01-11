@@ -12,6 +12,7 @@ MODE_BUILDING_SELECT = 'TYPING_BUILD'
 MODE_GAME_OVER = 'GAME_OVER'
 BUILDINGS_FILE_PATH = 'assets/buildings.json'
 CENTER_KEYS = ["f", "j", "g", "h"]
+THREAT_MODIFIER = 5
 
 
 class GameManager:
@@ -42,12 +43,17 @@ class GameManager:
         self.key_press_time: float = 0
 
         # Text tools
+        self.current_key: Key | None = None
         self.current_text: str | None = None
         self.current_input: list[str] = list()
         self.type_time: float = 0.0
+        self.mistakes: int = 0
 
-        # Mutables
-        self.current_key: Key | None = None
+        # Balance tools
+        self.threat = self.calculate_threat()  # TODO: balance ts out
+
+    def calculate_threat(self) -> int:
+        return self.phases.day * THREAT_MODIFIER + randint(0, self.resources.money.amount // 50)
 
     def resolve_night_battle(self) -> list[str] | None:
         """
@@ -55,13 +61,12 @@ class GameManager:
         If it's Night returns a list of strings with victory/loss information or None if it's not Night.
         """
         if self.phases.is_night():
-            threat = self.phases.day * 5 + randint(0, self.resources.money.amount // 50)  # TODO: balance ts out
             defense = self.resources.military.amount
 
-            result_str = f"THREAT LEVEL: {threat} | DEFENSE: {defense}"
+            result_str = f"THREAT LEVEL: {self.threat} | DEFENSE: {defense}"
 
-            if defense >= threat:
-                reward = threat * 2
+            if defense >= self.threat:
+                reward = self.threat * 2
                 self.resources.knowledge.add(reward)  # TODO: balance ts out
                 return [
                     "VICTORY!",
@@ -70,7 +75,7 @@ class GameManager:
                     f"Gained {reward} Knowledge from combat experience."
                 ]
             else:
-                loss = threat - defense
+                loss = self.threat - defense
                 lost_food = loss * 2
                 lost_money = loss * 5  # TODO: balance ts out
                 self.resources.food.subtract(lost_food)
@@ -131,14 +136,16 @@ class GameManager:
             if "".join(self.current_input) == self.current_text:
                 for res in self.resources:
                     if res == self.current_key.building.output_resource:
-                        res.add(self.current_key.building.output_amount)
+                        output = self.current_key.building.output_amount
+                        amount_gained = output * (1 - min(self.mistakes // len(self.current_text), 1))
+                        res.add(amount_gained)
                         self.current_key.active = False
                         self.message.append(
-                            f"You gained {self.current_key.building.output_amount}{self.current_key.building.output_resource.symbol}!")
+                            f"You gained {amount_gained}{self.current_key.building.output_resource.symbol}!")
 
                         cpm = (len(self.current_text) * 12) / (time() - self.type_time)
 
-                        self.message.append(f"Your WPM was: {cpm:>4}!")
+                        self.message.append(f"Your WPM was: {cpm:.02f}!")
                         self.message_time = time()
                         self.message_color = Colors.SUCCESS.pair
                         self.reset(False)
@@ -149,7 +156,8 @@ class GameManager:
         self.mode = MODE_GAME_OVER
         self.message = [
             "You have beaten the game!",
-            f"Your total money was {self.resources.money.amount}!"
+            f"Your total money was {self.resources.money.amount}!",
+            "Press [Esc] to exit the game."
         ]
         self.message_time = time()
         self.message_color = Colors.SUCCESS.pair
@@ -171,20 +179,23 @@ class GameManager:
                 if (key == 9 or key == 10) and self.mode == MODE_IDLE:  # Tab or Enter
                     self.phases.next_phase()
                     self.keyboard.reset_keys()
-                    self.battle_report = self.resolve_night_battle()
+                    self.threat = self.calculate_threat()
+                    if self.phases.is_night():
+                        self.battle_report = self.resolve_night_battle()
                     if self.phases.day == 6:
                         self.game_over()
 
                 # TODO: add support for diacritics
 
-                if key == 27:  # escape = exit
-                    if self.mode == MODE_IDLE:
-                        raise KeyboardInterrupt
-                    else:
-                        self.reset(True)
                 if key == 263 or key == 8:  # TODO: test what key == 263 actually does (it looked like backspace on my home PC)
                     if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING) and self.current_input:
                         self.current_input.pop()
+
+            if key == 27:  # escape = exit
+                if self.mode == MODE_IDLE or self.mode == MODE_GAME_OVER:
+                    raise KeyboardInterrupt
+                else:
+                    self.reset(True)
             self.logic_checks()
 
     def reset(self, reset_message, reset_others=True):
@@ -198,10 +209,10 @@ class GameManager:
         if reset_others:
             self.mode = MODE_IDLE
 
+            self.current_key = None
             self.current_text = None
             self.current_input = list()
-
-            self.current_key = None
+            self.mistakes = 0
 
     def log(self, message, priority: bool = False):
         if self.debug_mode:

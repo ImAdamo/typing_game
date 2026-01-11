@@ -190,12 +190,13 @@ def draw_rounded_key_box(game_manager, stdscr, y, x, h, w, color, shadow=True):
 
 def draw_ui(screen, game_manager, max_h, max_w):
     global MESSAGE_TIME
-    phase_str = f" PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day} "
+    phase_str = f"PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day}"
     res_str = str(game_manager.resources)
 
     try:
         # Phase info (left side)
         screen.addstr(1, 3, phase_str, Colors.TEXT.pair | curses.A_BOLD)
+        screen.addstr(2, 3, f"THREAT: {game_manager.threat}", Colors.TEXT.pair | curses.A_BOLD)
 
         # Resources (center-right)
         screen.addstr(1, max_w // 2 - len(res_str) // 2, res_str, Colors.TEXT.pair)
@@ -308,9 +309,11 @@ def draw_typing_interface(game_manager, screen, title, target, current_input, st
                 if current_input[i] == char:
                     color = Colors.SUCCESS.pair  # Correct
                 elif char == ' ' and current_input[i] != ' ':
+                    game_manager.mistakes += 1
                     color = Colors.ERROR.pair  # Incorrect space input
                     screen.addch(start_y + 1, start_x + i, '¯', color)  # Red overline ASCII char for wrong space
                 else:
+                    game_manager.mistakes += 1
                     color = Colors.ERROR.pair  # Incorrect
             screen.addch(start_y, start_x + i, char, color | curses.A_BOLD)
 
@@ -327,6 +330,7 @@ def main(screen):
     curses.start_color()
     Colors.init()
     screen.nodelay(True)
+    curses.set_escdelay(1)
     game_manager = gm.GameManager(KEYBOARD_LAYOUT)
     while True:
         draw(screen, game_manager)
