@@ -1,5 +1,4 @@
 import curses
-from dataclasses import dataclass
 
 
 class Color:
@@ -16,12 +15,16 @@ class Color:
         Color._auto_index += 1
 
     def init_pair(self):
-        """Initializes the color pair in the curses library."""
+        """
+        Initializes the color pair in the curses library.
+        """
         curses.init_pair(self.index, self.fg, self.bg)
 
     @property
     def pair(self) -> int:
-        """Returns the curses color pair attribute."""
+        """
+        Returns the curses color pair attribute.
+        """
         return curses.color_pair(self.index)
 
 

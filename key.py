@@ -1,11 +1,14 @@
 from math import sqrt
-from dataclasses import dataclass
-from buildings import BuildingType, Buildings
+from buildings import BuildingType
 
 CENTER_KEYS: dict[str, tuple[int, int]] = dict()
 
 
 class Key:
+    """
+    Single key for keyboard.
+    """
+
     def __init__(self, char: str, row: int, col: int):
         self.char: str = char
         self.row: int = row
@@ -20,6 +23,10 @@ class Key:
 
 
 class Keyboard:
+    """
+    Keyboard holding all information on keys and operates over the keys.
+    """
+
     def __init__(self, layout: list[str], center_keys: list[str]):
         global CENTER_KEYS
         for letter in center_keys:
@@ -37,6 +44,9 @@ class Keyboard:
         self.char_rows = layout
 
     def starting_keys(self, buildings):
+        """
+        Initializes the starting keys and adds starter buildings on keys 'f' and 'j'.
+        """
         for key_char in CENTER_KEYS.keys():
             key = self.get_by_char(key_char)
             key.locked = False
@@ -47,8 +57,15 @@ class Keyboard:
                     key.building = buildings.find_building_by_id("low_money")
 
     def get_by_char(self, char: str) -> Key:
-        return next((item for item in self.keys if item.char.lower() == char.lower()), None)
+        """
+        Returns the first key found with the given char.
+        """
+        return next((key for key in self.keys if key.char.lower() == char.lower()), None)
 
     def reset_keys(self):
+        """
+        Resets all keys in the keyboard to be active again.
+        Usually called after going to the next phase.
+        """
         for key in self.keys:
             key.active = True

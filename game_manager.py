@@ -1,10 +1,9 @@
 from day_phases import Phases
 from resources import Resources
-from buildings import Buildings, BuildingType
+from buildings import Buildings
 from key import Keyboard, Key
 from colors import Colors
 from time import time
-from random import randint
 
 MODE_IDLE = 'IDLE'
 MODE_TYPING = 'TYPING_JOB'
@@ -20,6 +19,9 @@ DAYS_TO_SURVIVE = 5
 
 
 class GameManager:
+    """
+    Class which manages most backend operations and variables.
+    """
     def __init__(self, keyboard_layout: list[str]):
         # Resources
         self.phases: Phases = Phases()
@@ -29,7 +31,7 @@ class GameManager:
         self.keyboard.starting_keys(self.buildings)
 
         # Logging tools
-        self.debug_mode: bool = False
+        self.debug_mode: bool = True
         self.log_message: str = ""
         self.priority_message: str = ""
 
@@ -50,12 +52,18 @@ class GameManager:
         self.current_text: str | None = None
         self.current_input: list[str] = list()
         self.type_time: float = 0.0
+        self.wpm: float = 0.0
         self.mistakes: int = 0
+        self.mistake_ratio: float = 0.0
 
-        # Balance tools
-        self.threat = self.calculate_threat()
+        # Miscellaneous
+        self.threat: int = self.calculate_threat()
+        self.escape_time: float = 0.0
 
     def calculate_threat(self) -> int:
+        """
+        Calculates the threat for the given day without any randomness.
+        """
         return int(round((self.phases.day * THREAT_STARTER) * (THREAT_MODIFIER ** self.phases.day)))
 
     def resolve_night_battle(self) -> list[str] | None:
@@ -89,6 +97,9 @@ class GameManager:
             return None
 
     def interact_key(self, char):
+        """
+        Interacts with a key instance on the given char. Chooses whether to unlock, build or activate.
+        """
         if self.mode == MODE_IDLE:
             if not self.phases.is_night():
                 self.current_key = self.keyboard.get_by_char(char)
@@ -132,26 +143,29 @@ class GameManager:
                                      Colors.SUCCESS.pair)
                     self.reset(False)
         elif self.mode == MODE_TYPING and self.current_key.building is not None:
+            self.wpm = (len(self.current_text) * 12) / max((time() - self.type_time), 0.001)
+            self.mistake_ratio = (1.0 - min(self.mistakes / len(self.current_text), 1.0))
             if "".join(self.current_input) == self.current_text:
                 for res in self.resources:
                     if res == self.current_key.building.output_resource:
-                        mistake_ratio: float = (1.0 - min(self.mistakes / len(self.current_text), 1.0))
-                        amount_gained: int = int(round(self.current_key.building.output_amount * mistake_ratio))
+                        amount_gained: int = int(round(self.current_key.building.output_amount * self.mistake_ratio))
                         res.add(amount_gained)
                         self.current_key.active = False
                         self.add_message(
                             f"You gained {amount_gained}{self.current_key.building.output_resource.symbol}!",
                             Colors.SUCCESS.pair)
-                        wpm = (len(self.current_text) * 12) / (time() - self.type_time)
-                        self.add_message(f"Your WPM was: {wpm:.02f}!", Colors.SUCCESS.pair)
-                        self.add_message(f"Your accuracy was: {mistake_ratio:.2%}.",
-                                         Colors.SUCCESS.pair if mistake_ratio >= 0.5 else Colors.ERROR.pair)
+                        self.add_message(f"Your WPM was: {self.wpm:.02f}!", Colors.SUCCESS.pair)
+                        self.add_message(f"Your accuracy was: {self.mistake_ratio:.2%}.",
+                                         Colors.SUCCESS.pair if self.mistake_ratio >= 0.5 else Colors.ERROR.pair)
                         if self.current_key.building.input_resource is not None:
                             self.current_key.building.input_resource.subtract(self.current_key.building.input_amount)
                         self.reset(False)
                         break
 
     def game_over(self, win: bool):
+        """
+        Handles game over and adds win messages.
+        """
         self.reset(True)
         self.mode = MODE_GAME_OVER
         if win:
@@ -162,6 +176,9 @@ class GameManager:
         self.add_message("Press [Esc] to exit the game.", Colors.TEXT.pair)
 
     def key_logic(self, key: int):
+        """
+        Interprets keycodes given by curses and decided what to do with it.
+        """
         if key != -1:  # might not work
             self.key_press_time = time()
             self.log(key)
@@ -194,7 +211,11 @@ class GameManager:
 
             if key == 27:  # escape = exit
                 if self.mode == MODE_IDLE or self.mode == MODE_GAME_OVER:
-                    raise KeyboardInterrupt
+                    if time() - self.escape_time <= 5.0:
+                        raise KeyboardInterrupt
+                    else:
+                        self.escape_time = time()
+                        self.add_message("To exit press [Esc] again!", Colors.WARNING.pair)
                 else:
                     self.reset(True)
             self.logic_checks()
@@ -216,12 +237,18 @@ class GameManager:
             self.mistakes = 0
 
     def add_message(self, message: str, message_color):
+        """
+        Adds a message to be shown on screen and resets the timer for messages disappearing.
+        """
         if len(self.message) >= 3:
             self.message.pop(0)
         self.message.append((message, message_color))
         self.message_time = time()
 
     def log(self, message, priority: bool = False):
+        """
+        Only used in debug mode. Logs a message to be shown on screen, prioritizes the last priority message found.
+        """
         if self.debug_mode:
             self.priority_message = str(message) if priority else ""
             self.log_message = self.priority_message if self.priority_message else str(message)

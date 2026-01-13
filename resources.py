@@ -1,8 +1,11 @@
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 
 
 @dataclass
 class Resource:
+    """
+    Single resource used for tracking amounts
+    """
     name: str
     symbol: str
     amount: int
@@ -11,14 +14,25 @@ class Resource:
         return f"{self.name}: {self.amount}{self.symbol}"
 
     def add(self, amount: int):
+        """
+        Adds amount to the resource.amount
+        Here for clarity
+        """
         self.amount += amount
 
     def subtract(self, amount: int):
+        """
+        Subtracts amount from resource.amount
+        Here for clarity
+        """
         self.amount -= min(amount, self.amount)
 
 
 @dataclass
 class Resources:
+    """
+    Singleton class holding all information on resources for the game's needs.
+    """
     money = Resource("Money", "$", 50)
     food = Resource("Food", "🍖", 0)
     military = Resource("Military", "🪖", 0)
@@ -43,6 +57,10 @@ class Resources:
 
     @staticmethod
     def get_instance():
+        """
+        Initializes an instance of Resources if it's not already made, else gives a reference to the one active.
+        Enables singleton acting.
+        """
         if Resources.__instance is None:
             Resources.__instance = Resources()
         return Resources.__instance
