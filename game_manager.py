@@ -101,7 +101,6 @@ class GameManager:
         if self.mode == MODE_IDLE:
             if not self.phases.is_night():
                 self.current_key = self.keyboard.get_by_char(char)
-                curr_building = self.current_key.building
                 if self.current_key.locked:
                     if self.resources.knowledge.amount >= self.current_key.unlock_cost:
                         self.current_key.locked = False
@@ -111,17 +110,17 @@ class GameManager:
                         self.add_message(
                             f"You need {self.current_key.unlock_cost}{self.resources.knowledge.symbol} to unlock '{self.current_key.char.upper()}'!",
                             Colors.ERROR.pair)
-                elif curr_building is not None and self.current_key.active:
-                    if curr_building.input_resource is not None:
-                        if curr_building.input_resource.amount < curr_building.input_amount:
+                elif self.current_key.building is not None and self.current_key.active:
+                    if self.current_key.building.input_resource is not None:
+                        if self.current_key.building.input_resource.amount < self.current_key.building.input_amount:
                             self.add_message(
-                                f"You need {curr_building.input_amount}{curr_building.input_resource.symbol} to activate {curr_building.input_resource.name}!",
+                                f"You need {self.current_key.building.input_amount}{self.current_key.building.input_resource.symbol} to activate {self.current_key.building.input_resource.name}!",
                                 Colors.ERROR.pair)
                             return
-                    self.current_text = curr_building.get_text()
+                    self.current_text = self.current_key.building.get_text()
                     self.mode = MODE_TYPING
                     self.type_time = time()
-                elif curr_building is None:  # already checks for key locked in earlier if
+                elif self.current_key.building is None:  # already checks for key locked in earlier if
                     self.mode = MODE_BUILDING_SELECT
             else:
                 self.add_message(f"The city sleeps at night...", Colors.NIGHT.pair)
@@ -141,7 +140,7 @@ class GameManager:
                                      Colors.SUCCESS.pair)
                     self.reset(False)
         elif self.mode == MODE_TYPING and self.current_key.building is not None:
-            self.wpm = (len(self.current_text) * 12) / max((time() - self.type_time), 0.001)
+            self.wpm = (len(self.current_input) * 12) / max((time() - self.type_time), 0.001)
             self.mistake_ratio = (1.0 - min(self.mistakes / len(self.current_text), 1.0))
             if "".join(self.current_input) == self.current_text:
                 for res in self.resources:
