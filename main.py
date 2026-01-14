@@ -4,6 +4,7 @@ from time import sleep, time
 from colors import Colors
 
 import game_manager as gm
+from game_manager import GameManager
 
 # Params
 KEY_DELAY = 0.1
@@ -15,8 +16,42 @@ KEYBOARD_LAYOUT = [
     "zxcvbnm,./"
 ]
 
+LOGO: list[str] = [
+    r" _  __             _                           _   _  _                     _",
+    r"| |/ / ___ _   _  | |__   ___   __ _  _ __  __| | | |/ /(_) _ __   __ _  __| |  ___   _ __ ___   ___ ",
+    r"| ' / / _ \ | | | | '_ \ / _ \ / _` || '__|/ _` | | ' / | || '_ \ / _` |/ _` | / _ \ | '_ ` _ \ / __|",
+    r"| . \|  __/ |_| | | |_) | (_) | (_| || |  | (_| | | . \ | || | | | (_| | (_| || (_) || | | | | |\__ \ ",
+    r"|_|\_\\___| \__,| |_.__/ \___/ \__,_||_|   \__,_| |_|\_\|_||_| |_|\__, |\__,_| \___/ |_| |_| |_||___/",
+    r"            |___/                                                  |___/"
+]
 
-def draw(screen, game_manager):
+# Messages
+INITIAL_MESSAGE: list[str] = [
+    "Welcome to Keyboard Kingdoms!",
+    "",
+    "In this game you are tasked with managing your own city built on a keyboard.",
+    f"The main goal is to survive {gm.DAYS_TO_SURVIVE} days.",
+    "Raiders come to attack you every night with a raising difficulty shown on the top right.",
+    "",
+    "The way you prevent those raiders from stealing your livelihood is by defeating them with your military.",
+    "",
+    "There are 4 types of resources: Money, Food, Military and Knowledge",
+    "Money is used to purchase buildings on keys which you have already unlocked.",
+    "Food is used to feed your military while they train in their respective buildings.",
+    "Military is your only defense against the raiders.",
+    "Knowledge is for unlocking more keys on the keyboard. You can also gain it by defeating raiders.",
+    "",
+    "You gain resources by activating their respective buildings and writing a short text.",
+    "Each mistake you make removes a part of the resources you gain, so type wisely!",
+    "",
+    "",
+    "TL;DR: Build buildings, write texts, raise your military and defeat those raiders!",
+    "",
+]
+CONFIRM_MESSAGE = "Continue"
+
+
+def draw(screen, game_manager: GameManager):
     """
     Complete unified draw function
     """
@@ -25,10 +60,13 @@ def draw(screen, game_manager):
     max_h, max_w = screen.getmaxyx()
     # renderer graphics
     draw_border(game_manager, screen, max_h, max_w, game_manager.phases.current_phase)
-    # screen.border("║", "║", "═", "═", "╔", "╗", "╚", "╝")
     screen.addstr(0, 0, game_manager.log_message, Colors.TEXT.pair)
-    draw_ui(screen, game_manager, max_h, max_w)
-    draw_keyboard(screen, game_manager, max_h, max_w)
+    if game_manager.mode == gm.MODE_INITIAL:
+        draw_initial_screen(screen, game_manager, max_w)
+    else:
+        draw_ui(screen, game_manager, max_h, max_w)
+        draw_keyboard(screen, game_manager, max_h, max_w)
+    draw_message(game_manager, screen, max_w)
     screen.refresh()
 
 
@@ -62,6 +100,38 @@ def draw_border(game_manager, screen, max_h, max_w, curr_phase):
 
     except curses.error:
         game_manager.log("DrawBorder failed")
+
+
+def draw_initial_screen(screen, game_manager: GameManager, max_w: int):
+    try:
+        height_modifier = 12
+        start_x = 0
+        for string in LOGO:
+            start_x = max(start_x, len(string))
+        start_x = (max_w - start_x) // 2
+        for index_y, line in enumerate(LOGO):
+            screen.addstr(height_modifier + index_y - 7, start_x, line, Colors.NOON.pair | curses.A_DIM)
+
+        game_manager.current_text = CONFIRM_MESSAGE
+        for index_y, line in enumerate(INITIAL_MESSAGE):
+            screen.addstr(height_modifier + index_y, (max_w - len(line)) // 2, line, Colors.TEXT.pair | curses.A_DIM)
+
+        start_x = (max_w - len(CONFIRM_MESSAGE)) // 2
+        if start_x < 0:
+            start_x = 0
+
+        for i, char in enumerate(CONFIRM_MESSAGE):
+            color = Colors.TEXT.pair
+            # Check if the character is correctly typed
+            if i < len(game_manager.current_input):
+                color = Colors.SUCCESS.pair if game_manager.current_input[i] == char else Colors.ERROR.pair
+            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 1, start_x + i, char, color | curses.A_BOLD)
+
+        cursor_idx = len(game_manager.current_input)
+        if cursor_idx < len(CONFIRM_MESSAGE):
+            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 2, start_x + cursor_idx, '^', Colors.TEXT.pair)
+    except curses.error:
+        game_manager.log("DrawInitialScreen failed")
 
 
 def draw_keyboard(screen, game_manager, max_h, max_w):
@@ -165,7 +235,7 @@ def draw_rounded_key_box(game_manager, screen, y, x, h, w, color, shadow=True):
             for i in range(w - 1):  # Bottom shadow
                 screen.addch(y + h, x + i + 1, '▀', shadow_color)
 
-            screen.addch(y + h, x + w, '▘', shadow_color) # Bottom-right corner shadow
+            screen.addch(y + h, x + w, '▘', shadow_color)  # Bottom-right corner shadow
 
         except curses.error:
             game_manager.log("DrawKeyBox failed at shadow")
@@ -190,7 +260,22 @@ def draw_rounded_key_box(game_manager, screen, y, x, h, w, color, shadow=True):
         game_manager.log("DrawKeyBox failed at border")
 
 
-def draw_ui(screen, game_manager, max_h, max_w):
+def draw_message(game_manager, screen, max_w):
+    global MESSAGE_TIME
+    if game_manager.mode == gm.MODE_GAME_OVER:
+        MESSAGE_TIME = 1000.0
+    if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
+        try:
+            for dy, (message, message_color) in enumerate(game_manager.message):
+                c_x = (max_w - len(message)) // 2
+                screen.addstr(3 + dy, c_x, message, message_color | curses.A_BOLD)
+        except curses.error:
+            game_manager.log("DrawMessage failed")
+    else:
+        game_manager.reset(True, False)
+
+
+def draw_ui(screen, game_manager: GameManager, max_h: int, max_w: int):
     """
     Draws all UI elements, like:
     Phase info, threat, resources, typehints
@@ -198,7 +283,6 @@ def draw_ui(screen, game_manager, max_h, max_w):
     Night
     Also handles when to write typing_interface, building_interface or idle
     """
-    global MESSAGE_TIME
     phase_str = f"PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day}"
     res_str = str(game_manager.resources)
 
@@ -217,17 +301,6 @@ def draw_ui(screen, game_manager, max_h, max_w):
             screen.addstr(1 + i, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
     except curses.error:
         game_manager.log("DrawUI failed at phase/resources/hint")
-    if game_manager.mode == gm.MODE_GAME_OVER:
-        MESSAGE_TIME = 1000.0
-    if game_manager.message and time() - game_manager.message_time <= MESSAGE_TIME:
-        try:
-            for dy, (message, message_color) in enumerate(game_manager.message):
-                c_x = (max_w - len(message)) // 2
-                screen.addstr(3 + dy, c_x, message, message_color | curses.A_BOLD)
-        except curses.error:
-            game_manager.log("DrawUI failed at message")
-    else:
-        game_manager.reset(True, False)
 
     center_y = max_h // 4
 
@@ -248,8 +321,7 @@ def draw_ui(screen, game_manager, max_h, max_w):
 
     elif game_manager.mode == gm.MODE_TYPING:
         msg = f"ACTIVATING: {game_manager.current_key.building.name.upper()}"
-        draw_typing_interface(game_manager, screen, msg, game_manager.current_text, game_manager.current_input,
-                              center_y, max_w)
+        draw_typing_interface(game_manager, screen, msg, center_y, max_w)
 
     elif game_manager.mode == gm.MODE_BUILDING_SELECT:
         # Build Menu Table
@@ -303,36 +375,38 @@ def draw_ui(screen, game_manager, max_h, max_w):
                 game_manager.log("DrawUI failed on IDLE")
 
 
-def draw_typing_interface(game_manager, screen, title, target, current_input, start_y, max_w):
+def draw_typing_interface(game_manager: GameManager, screen, title: str, start_y: int, max_w: int):
     """
     Draws the typing interface including colored text for correct/mistakes
     """
     try:
         screen.addstr(start_y - 2, (max_w - len(title)) // 2, title, Colors.TEXT.pair | curses.A_DIM)
         wpm_message = f"Your WPM is: {game_manager.wpm:.02f}"
-        screen.addstr(start_y - 1, (max_w - len(wpm_message)) // 2 + len(title), wpm_message, Colors.TEXT.pair | curses.A_DIM)
+        screen.addstr(start_y - 1, (max_w - len(wpm_message)) // 2 + len(title), wpm_message,
+                      Colors.TEXT.pair | curses.A_DIM)
         mistakes_message = f"Your accuracy is: {game_manager.mistake_ratio:.2%}"
-        screen.addstr(start_y - 1, (max_w - len(mistakes_message)) // 2 - len(title), mistakes_message, Colors.TEXT.pair | curses.A_DIM)
+        screen.addstr(start_y - 1, (max_w - len(mistakes_message)) // 2 - len(title), mistakes_message,
+                      Colors.TEXT.pair | curses.A_DIM)
 
-        start_x = (max_w - len(target)) // 2
+        start_x = (max_w - len(game_manager.current_text)) // 2
         if start_x < 0:
             start_x = 0
 
-        for i, char in enumerate(target):
+        for i, char in enumerate(game_manager.current_text):
             color = Colors.TEXT.pair
             # Check if the character is correctly typed
-            if i < len(current_input):
-                if current_input[i] == char:
+            if i < len(game_manager.current_input):
+                if game_manager.current_input[i] == char:
                     color = Colors.SUCCESS.pair  # Correct
-                elif char == ' ' and current_input[i] != ' ':
+                elif char == ' ' and game_manager.current_input[i] != ' ':
                     color = Colors.ERROR.pair  # Incorrect (space)
                     screen.addch(start_y + 1, start_x + i, '¯', color)  # Red overline ASCII char for wrong space
                 else:
                     color = Colors.ERROR.pair  # Incorrect
             screen.addch(start_y, start_x + i, char, color | curses.A_BOLD)
 
-        cursor_idx = len(current_input)
-        if cursor_idx < len(target):
+        cursor_idx = len(game_manager.current_input)
+        if cursor_idx < len(game_manager.current_text):
             screen.addch(start_y + 1, start_x + cursor_idx, '^', Colors.TEXT.pair)
     except curses.error:
         game_manager.log("DrawTypingInterface failed")

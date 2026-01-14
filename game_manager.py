@@ -9,6 +9,7 @@ MODE_IDLE = 'IDLE'
 MODE_TYPING = 'TYPING_JOB'
 MODE_BUILDING_SELECT = 'TYPING_BUILD'
 MODE_GAME_OVER = 'GAME_OVER'
+MODE_INITIAL = 'INITIAL_SCREEN'
 BUILDINGS_FILE_PATH = 'assets/buildings.json'
 CENTER_KEYS = ["f", "j", "g", "h"]
 
@@ -31,7 +32,7 @@ class GameManager:
         self.keyboard.starting_keys(self.buildings)
 
         # Logging tools
-        self.debug_mode: bool = True
+        self.debug_mode: bool = False
         self.log_message: str = ""
         self.priority_message: str = ""
 
@@ -41,7 +42,7 @@ class GameManager:
         self.battle_report: list[str] | None = None
 
         # Mode
-        self.mode: str = MODE_IDLE
+        self.mode: str = MODE_INITIAL
 
         # Key highlight tools
         self.active_key: Key | None = None
@@ -72,11 +73,8 @@ class GameManager:
         If it's Night returns a list of strings with victory/loss information or None if it's not Night.
         """
         if self.phases.is_night():
-            defense = self.resources.military.amount
-
-            result_str = f"THREAT LEVEL: {self.threat} | DEFENSE: {defense}"
-
-            if defense >= self.threat:
+            result_str = f"THREAT LEVEL: {self.threat} | MILITARY: {self.resources.military.amount}"
+            if self.resources.military.amount >= self.threat:
                 self.resources.knowledge.add(self.threat)
                 return [
                     "VICTORY!",
@@ -161,6 +159,10 @@ class GameManager:
                             self.current_key.building.input_resource.subtract(self.current_key.building.input_amount)
                         self.reset(False)
                         break
+        elif self.mode == MODE_INITIAL:
+            if "".join(self.current_input) == self.current_text:
+                self.mode = MODE_IDLE
+                self.reset(True)
 
     def game_over(self, win: bool):
         """
@@ -179,6 +181,7 @@ class GameManager:
         """
         Interprets keycodes given by curses and decided what to do with it.
         """
+
         if key != -1:  # might not work
             self.key_press_time = time()
             self.log(key)
@@ -186,14 +189,15 @@ class GameManager:
                 if 32 <= key <= 126:  # Writable characters
                     key_char = chr(key)
                     self.active_key = key_char.lower()
-                    if self.mode == MODE_BUILDING_SELECT:
+                    if self.mode in (MODE_BUILDING_SELECT, MODE_INITIAL):
                         self.current_input.append(key_char)
                     elif self.mode == MODE_TYPING and len(self.current_input) < len(self.current_text):
                         self.current_input.append(key_char)
                         if key_char != self.current_text[len(self.current_input) - 1]:
                             self.mistakes += 1
                         self.log(key)
-                    self.interact_key(key_char)
+                    if not self.mode == MODE_INITIAL:
+                        self.interact_key(key_char)
                 if (key == 9 or key == 10) and self.mode == MODE_IDLE:  # Tab or Enter
                     self.phases.next_phase()
                     self.keyboard.reset_keys()
@@ -206,11 +210,11 @@ class GameManager:
                 # TODO: add support for diacritics
 
                 if key == 263 or key == 8:
-                    if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING) and self.current_input:
+                    if self.mode in (MODE_BUILDING_SELECT, MODE_TYPING, MODE_INITIAL) and self.current_input:
                         self.current_input.pop()
 
             if key == 27:  # escape = exit
-                if self.mode == MODE_IDLE or self.mode == MODE_GAME_OVER:
+                if self.mode in (MODE_IDLE, MODE_GAME_OVER, MODE_INITIAL):
                     if time() - self.escape_time <= 5.0:
                         raise KeyboardInterrupt
                     else:
