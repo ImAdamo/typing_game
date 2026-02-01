@@ -31,22 +31,25 @@ INITIAL_MESSAGE: list[str] = [
     "",
     "In this game you are tasked with managing your own city built on a keyboard.",
     f"The main goal is to survive {gm.DAYS_TO_SURVIVE} days.",
-    "Raiders come to attack you every night with a raising difficulty shown on the top right.",
+    "Raiders come to attack you every night with a raising difficulty shown in the middle.",
     "",
     "The way you prevent those raiders from stealing your livelihood is by defeating them with your military.",
     "",
-    "There are 4 types of resources: Money, Food, Military and Knowledge",
-    "Money is used to purchase buildings on keys which you have already unlocked.",
-    "Food is used to feed your military while they train in their respective buildings.",
-    "Military is your only defense against the raiders.",
-    "Knowledge is for unlocking more keys on the keyboard. You can also gain it by defeating raiders.",
+    "+------------+---------------------------------------------------------------+",
+    "| Resource   | Description                                                   |",
+    "+------------+---------------------------------------------------------------+",
+    "| Money      | Used to purchase buildings on keys you have already unlocked. |",
+    "| Food       | Used to feed your military while they train in their building.|",
+    "| Military   | Your only defense against the raiders.                        |",
+    "| Knowledge  | Used to unlock more keys on the keyboard; also gained by      |",
+    "|            | defeating raiders.                                            |",
+    "+------------+---------------------------------------------------------------+",
     "",
     "You gain resources by activating their respective buildings and writing a short text.",
     "Each mistake you make removes a part of the resources you gain, so type wisely!",
     "",
     "",
-    "TL;DR: Build buildings, write texts, raise your military and defeat those raiders!",
-    "",
+    "To continue to the main game type:",
 ]
 CONFIRM_MESSAGE = "Continue"
 
@@ -110,11 +113,14 @@ def draw_initial_screen(screen, game_manager: GameManager, max_w: int):
             start_x = max(start_x, len(string))
         start_x = (max_w - start_x) // 2
         for index_y, line in enumerate(LOGO):
-            screen.addstr(height_modifier + index_y - 7, start_x, line, Colors.NOON.pair | curses.A_DIM)
+            screen.addstr(height_modifier + index_y - 7, start_x, line, Colors.NOON.pair)
 
         game_manager.current_text = CONFIRM_MESSAGE
         for index_y, line in enumerate(INITIAL_MESSAGE):
-            screen.addstr(height_modifier + index_y, (max_w - len(line)) // 2, line, Colors.TEXT.pair | curses.A_DIM)
+            if index_y == len(INITIAL_MESSAGE) - 1:
+                screen.addstr(height_modifier + index_y, (max_w - len(line)) // 2, line, Colors.NOON.pair)
+            else:
+                screen.addstr(height_modifier + index_y, (max_w - len(line)) // 2, line, Colors.TEXT.pair | curses.A_DIM)
 
         start_x = (max_w - len(CONFIRM_MESSAGE)) // 2
         if start_x < 0:
@@ -125,11 +131,11 @@ def draw_initial_screen(screen, game_manager: GameManager, max_w: int):
             # Check if the character is correctly typed
             if i < len(game_manager.current_input):
                 color = Colors.SUCCESS.pair if game_manager.current_input[i] == char else Colors.ERROR.pair
-            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 1, start_x + i, char, color | curses.A_BOLD)
+            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 2, start_x + i, char, color | curses.A_BOLD)
 
         cursor_idx = len(game_manager.current_input)
-        if cursor_idx < len(CONFIRM_MESSAGE):
-            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 2, start_x + cursor_idx, '^', Colors.TEXT.pair)
+        if cursor_idx <= len(CONFIRM_MESSAGE):
+            screen.addch(len(INITIAL_MESSAGE) + height_modifier + 3, start_x + cursor_idx, '^', Colors.TEXT.pair)
     except curses.error:
         game_manager.log("DrawInitialScreen failed")
 
@@ -283,19 +289,31 @@ def draw_ui(screen, game_manager: GameManager, max_h: int, max_w: int):
     Night
     Also handles when to write typing_interface, building_interface or idle
     """
-    phase_str = f"PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day}"
     res_str = str(game_manager.resources)
 
     try:
-        # Phase info (left side)
-        screen.addstr(1, 3, phase_str, Colors.TEXT.pair | curses.A_BOLD)
-        screen.addstr(2, 3, f"THREAT: {game_manager.threat}", Colors.TEXT.pair | curses.A_BOLD)
+        # Idle
+        lines = [
+            "Keyboard Kingdoms",
+            "Morning/Afternoon/Evening: Build & Produce",
+            "Night: Defend your city with your Military",
+            "",
+            f"Survive the nightly attacks for {gm.DAYS_TO_SURVIVE} days!"
+        ]
+        for i, line in enumerate(lines):
+            try:
+                if i == 0:
+                    screen.addstr(2 + i, 3, line, Colors.TEXT.pair)
+                else:
+                    screen.addstr(3 + i, 3, line, Colors.TEXT.pair | curses.A_DIM)
+            except curses.error:
+                game_manager.log("DrawUI failed at top-left typehints")
 
         # Resources (center-right)
         screen.addstr(1, max_w // 2 - len(res_str) // 2, res_str, Colors.TEXT.pair)
 
         # Type hint (right side)
-        hints = ["[TAB/ENTER: Next Phase]",
+        hints = ["[TAB: Next Phase]",
                  "[ESC: Exit]"]
         for i, hint in enumerate(hints):
             screen.addstr(1 + i, max_w - len(hint) - 3, hint, Colors.TEXT.pair | curses.A_DIM)
@@ -355,24 +373,15 @@ def draw_ui(screen, game_manager: GameManager, max_h: int, max_w: int):
             game_manager.log("DrawUI Failed on BUILDING_SELECT")
 
     elif game_manager.mode == gm.MODE_IDLE:
-        # Idle
-        lines = [
-            "CITY MANAGEMENT",
-            "Morning/Afternoon/Evening: Build & Produce",
-            "Night: Defend your city with your Military",
-            "",
-            f"Survive the nightly attacks for {gm.DAYS_TO_SURVIVE} days!",
-            "",
-            "Press [Key] to Select",
-            "[Tab] or [Enter] to Next Phase",
-            "[Esc] to Exit"
-        ]
-        for i, line in enumerate(lines):
-            try:
-                screen.addstr(6 + i, (max_w - len(line)) // 2, line, Colors.TEXT.pair)
-                # 6 is here because it's the first empty line on the screen (3-5 are messages)
-            except curses.error:
-                game_manager.log("DrawUI failed on IDLE")
+        # Phase info (left side)
+        try:
+            phase_str = f"PHASE: {game_manager.phases.current_phase.name} | Day {game_manager.phases.day}"
+            threat_str = f"Required Military: {game_manager.threat}"
+
+            screen.addstr(6, (max_w - len(phase_str)) // 2, phase_str, Colors.TEXT.pair | curses.A_BOLD)
+            screen.addstr(8, (max_w - len(threat_str)) // 2, threat_str, Colors.TEXT.pair | curses.A_BOLD)
+        except curses.error:
+            game_manager.log("DrawUI failed on IDLE")
 
 
 def draw_typing_interface(game_manager: GameManager, screen, title: str, start_y: int, max_w: int):
@@ -406,7 +415,7 @@ def draw_typing_interface(game_manager: GameManager, screen, title: str, start_y
             screen.addch(start_y, start_x + i, char, color | curses.A_BOLD)
 
         cursor_idx = len(game_manager.current_input)
-        if cursor_idx < len(game_manager.current_text):
+        if cursor_idx <= len(game_manager.current_text):
             screen.addch(start_y + 1, start_x + cursor_idx, '^', Colors.TEXT.pair)
     except curses.error:
         game_manager.log("DrawTypingInterface failed")

@@ -23,6 +23,7 @@ class GameManager:
     """
     Class which manages most backend operations and variables.
     """
+
     def __init__(self, keyboard_layout: list[str]):
         # Resources
         self.phases: Phases = Phases()
@@ -188,7 +189,8 @@ class GameManager:
                 if 32 <= key <= 126:  # Writable characters
                     key_char = chr(key)
                     self.active_key = key_char.lower()
-                    if self.mode in (MODE_BUILDING_SELECT, MODE_INITIAL):
+                    if self.mode == MODE_BUILDING_SELECT or (
+                            self.mode == MODE_INITIAL and len(self.current_input) < len(self.current_text)):
                         self.current_input.append(key_char)
                     elif self.mode == MODE_TYPING and len(self.current_input) < len(self.current_text):
                         self.current_input.append(key_char)
@@ -197,7 +199,7 @@ class GameManager:
                         self.log(key)
                     if not self.mode == MODE_INITIAL:
                         self.interact_key(key_char)
-                if (key == 9 or key == 10) and self.mode == MODE_IDLE:  # Tab or Enter
+                if (key == 9) and self.mode == MODE_IDLE:  # Tab
                     self.phases.next_phase()
                     self.keyboard.reset_keys()
                     self.threat = self.calculate_threat()
