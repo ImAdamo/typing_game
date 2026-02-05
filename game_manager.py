@@ -102,27 +102,28 @@ class GameManager:
         if self.mode == MODE_IDLE:
             if not self.phases.is_night():
                 self.current_key = self.keyboard.get_by_char(char)
-                if self.current_key.locked:
-                    if self.resources.knowledge.amount >= self.current_key.unlock_cost:
-                        self.current_key.locked = False
-                        self.resources.knowledge.subtract(self.current_key.unlock_cost)
-                        self.add_message(f"Key '{self.current_key.char.upper()}' unlocked!", Colors.SUCCESS.pair)
-                    else:
-                        self.add_message(
-                            f"You need {self.current_key.unlock_cost}{self.resources.knowledge.symbol} to unlock '{self.current_key.char.upper()}'!",
-                            Colors.ERROR.pair)
-                elif self.current_key.building is not None and self.current_key.active:
-                    if self.current_key.building.input_resource is not None:
-                        if self.current_key.building.input_resource.amount < self.current_key.building.input_amount:
+                if self.current_key:
+                    if self.current_key.locked:
+                        if self.resources.knowledge.amount >= self.current_key.unlock_cost:
+                            self.current_key.locked = False
+                            self.resources.knowledge.subtract(self.current_key.unlock_cost)
+                            self.add_message(f"Key '{self.current_key.char.upper()}' unlocked!", Colors.SUCCESS.pair)
+                        else:
                             self.add_message(
-                                f"You need {self.current_key.building.input_amount}{self.current_key.building.input_resource.symbol} to activate {self.current_key.building.input_resource.name}!",
+                                f"You need {self.current_key.unlock_cost}{self.resources.knowledge.symbol} to unlock '{self.current_key.char.upper()}'!",
                                 Colors.ERROR.pair)
-                            return
-                    self.current_text = self.current_key.building.get_text()
-                    self.mode = MODE_TYPING
-                    self.type_time = time()
-                elif self.current_key.building is None:  # already checks for key locked in earlier if
-                    self.mode = MODE_BUILDING_SELECT
+                    elif self.current_key.building is not None and self.current_key.active:
+                        if self.current_key.building.input_resource is not None:
+                            if self.current_key.building.input_resource.amount < self.current_key.building.input_amount:
+                                self.add_message(
+                                    f"You need {self.current_key.building.input_amount}{self.current_key.building.input_resource.symbol} to activate {self.current_key.building.input_resource.name}!",
+                                    Colors.ERROR.pair)
+                                return
+                        self.current_text = self.current_key.building.get_text()
+                        self.mode = MODE_TYPING
+                        self.type_time = time()
+                    elif self.current_key.building is None:  # already checks for key locked in earlier if
+                        self.mode = MODE_BUILDING_SELECT
             else:
                 self.add_message(f"The city sleeps at night...", Colors.NIGHT.pair)
 

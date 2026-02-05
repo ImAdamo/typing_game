@@ -24,7 +24,7 @@ class BuildingType:
     def __repr__(self):
         output_str = f"+{self.output_amount}{self.output_resource.symbol}"
         input_str = f"-{self.input_amount}{self.input_resource.symbol}" if self.input_resource else "-"
-        return f"{self.name:<10} {self.symbol:<4} ${self.purchase_cost:<5} {output_str:<15} {input_str:<10}"
+        return f"{self.name:<10} {self.symbol:<4} {str(self.purchase_cost) + Resources.get_instance().money.symbol:<5} {output_str:<15} {input_str:<10}"
 
     def get_text(self) -> str:
         """
@@ -38,6 +38,7 @@ class Buildings:
     """
     A set of buildings imported from a json asset.
     """
+
     def __init__(self, file_path):
         with Path(file_path).open(encoding="utf-8") as f:
             data = json.load(f)

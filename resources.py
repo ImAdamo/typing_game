@@ -33,7 +33,7 @@ class Resources:
     """
     Singleton class holding all information on resources for the game's needs.
     """
-    money = Resource("Money", "$", 50)
+    money = Resource("Money", "🪙", 50)
     food = Resource("Food", "🍖", 0)
     military = Resource("Military", "🪖", 0)
     knowledge = Resource("Knowledge", "🧠", 0)

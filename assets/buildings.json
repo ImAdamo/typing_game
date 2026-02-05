@@ -362,7 +362,7 @@
     {
       "id": "high_military",
       "name": "Barracks",
-      "symbol": "⚔",
+      "symbol": "🗡️",
       "purchase_cost": 100,
       "output_resource": "military",
       "output_amount": 10,
